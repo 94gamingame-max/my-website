@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>秘密任務招募令：恥度挑戰賽</title>
+    <!-- 使用可靠的 CDN 版本 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #000;
+            /* 建議將背景圖替換為穩定的 Unsplash 圖片 */
+            background-image: 
+                linear-gradient(to bottom, rgba(0,0,0,0.85), rgba(0,0,0,0.95)),
+                url('images.unsplash.com');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+
+        .neon-text {
+            text-shadow: 0 0 10px rgba(139, 92, 246, 0.7), 0 0 20px rgba(139, 92, 246, 0.5);
+        }
+        
+        .option-card {
+            transition: all 0.2s ease;
+        }
+        
+        .option-card:active {
+            transform: scale(0.98);
+        }
+
+        .selected {
+            border-color: #8b5cf6 !important;
+            background-color: rgba(139, 92, 246, 0.3) !important;
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
+        }
+
+        .hidden-section {
+            display: none;
+            opacity: 0;
+        }
+
+        .show {
+            display: block !important;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-white min-h-screen p-4 flex flex-col items-center justify-center">
+
+    <!-- 1. Header Section -->
+    <div id="intro" class="max-w-md w-full bg-gray-900/90 backdrop-blur-xl rounded-2xl p-8 border border-gray-700 shadow-2xl text-center">
+        <div class="mb-4 inline-block px-3 py-1 bg-purple-600 rounded-full text-xs font-bold tracking-wider animate-pulse">
+            2025 限時任務 Mission
+        </div>
+        <h1 class="text-4xl font-black mb-2 neon-text text-purple-400">傀儡挑戰賽</h1>
+        <p class="text-gray-400 text-sm mb-6 font-light tracking-wide">
+            戴上耳機，讓我操控你的靈魂。<br>
+            只要你敢說，我就敢給折扣。
+        </p>
+
+        <div class="bg-gray-800/50 rounded-xl p-4 mb-8 text-left border border-gray-700">
+            <h3 class="text-purple-400 font-bold mb-2"><i class="fas fa-sack-dollar mr-2"></i>任務獎勵</h3>
+            <p class="text-2xl font-bold text-white mb-1">抽 5 位 各折 NT$ 1,000</p>
+            <p class="text-xs text-gray-500">完成指定 10 句對話挑戰即可參加抽獎。</p>
+        </div>
+
+        <button onclick="startQuiz()" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-[1.02]">
+            我準備好了 <i class="fas fa-arrow-right ml-2"></i>
+        </button>
+    </div>
+
+    <!-- 2. Quiz Section -->
+    <div id="quiz" class="hidden-section max-w-md w-full">
+        <div class="w-full bg-gray-800 h-2 rounded-full mb-6">
+            <div id="progress" class="bg-purple-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+
+        <div id="question-container" class="bg-gray-900/90 backdrop-blur-xl rounded-2xl p-6 border border-gray-700 shadow-2xl relative min-h-[420px] flex flex-col justify-between">
+            <div>
+                <span id="q-number" class="text-purple-500 text-xs font-bold tracking-widest uppercase mb-2 block"></span>
+                <h2 id="q-text" class="text-2xl font-bold mb-6 min-h-[80px] flex items-center"></h2>
+                
+                <div id="options" class="space-y-3">
+                    <!-- Options injected here -->
+                </div>
+            </div>
+            
+            <div class="mt-6 flex justify-between items-center text-xs text-gray-500">
+                <span><i class="fas fa-lock mr-1"></i> 匿名測試</span>
+                <span>@ypps_ project</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Result Section -->
+    <div id="result" class="hidden-section max-w-md w-full bg-gray-900/90 backdrop-blur-xl rounded-2xl p-8 border border-gray-700 shadow-2xl text-center">
+        <div id="result-icon" class="text-6xl mb-4"></div>
+        <h2 id="result-title" class="text-3xl font-bold mb-3 neon-text text-purple-400"></h2>
+        <p id="result-desc" class="text-gray-300 mb-8 leading-relaxed font-light"></p>
+        
+        <div id="action-area" class="space-y-4">
+            <!-- 根據分數顯示不同按鈕 -->
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                text: "如果在包廂裡，現場氣氛突然變得超級尷尬，你會？",
+                options: [
+                    { text: "立刻假裝看手機，祈禱有人說話", score: 0 },
+                    { text: "主動找話題，雖然可能更尷尬", score: 5 },
+                    { text: "享受這種尷尬，甚至故意盯著對方看", score: 10 }
+                ]
+            },
+            {
+                text: "為了 1000 元，敢對初見面的小姐說「妳長得像我阿嬤」嗎？",
+                options: [
+                    { text: "絕對不行，會被打吧！", score: 0 },
+                    { text: "如果她看起來脾氣好，可以試試看", score: 5 },
+                    { text: "敢啊！為了錢我還可以哭給她看", score: 10 }
+                ]
+            },
+            {
+                text: "需要戴耳機並掛手機拍攝（不拍臉），你可以接受嗎？",
+                options: [
+                    { text: "不行，我有偶包/身分不便", score: 0 },
+                    { text: "可以接受，不拍到臉就好", score: 10 },
+                    { text: "沒問題，我甚至想開直播", score: 10 }
+                ]
+            },
+            {
+                text: "如果耳機命令你突然對著空氣敬禮，你會？",
+                options: [
+                    { text: "拒絕執行，太丟臉了", score: 0 },
+                    { text: "猶豫一下，邊笑邊做完", score: 5 },
+                    { text: "立刻執行，做得比要求的更誇張", score: 10 }
+                ]
+            },
+            {
+                text: "最後確認：被當成「中邪」也能無所謂嗎？",
+                options: [
+                    { text: "不行，我要維持帥哥形象", score: 0 },
+                    { text: "可以，事後解釋是在拍片就好", score: 10 },
+                    { text: "只要有折扣，當神經病也無所謂", score: 10 }
+                ]
+            }
+        ];
+
+        let currentQ = 0;
+        let totalScore = 0;
+
+        function startQuiz() {
+            document.getElementById('intro').classList.add('hidden-section');
+            document.getElementById('intro').style.display = 'none';
+            document.getElementById('quiz').classList.add('show');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            const q = questions[currentQ];
+            document.getElementById('q-number').innerText = `Question ${currentQ + 1} / ${questions.length}`;
+            document.getElementById('q-text').innerText = q.text;
+            
+            const optionsDiv = document.getElementById('options');
+            optionsDiv.innerHTML = '';
+
+            q.options.forEach((opt, index) => {
+                const btn = document.createElement('div');
+                btn.className = 'option-card bg-gray-800 p-4 rounded-xl border border-gray-600 cursor-pointer text-left text-gray-200 hover:bg-gray-700';
+                btn.innerHTML = `<span class="font-bold text-purple-500 mr-2">${String.fromCharCode(65 + index)}.</span> ${opt.text}`;
+                btn.onclick = () => selectOption(opt.score);
+                optionsDiv.appendChild(btn);
+            });
+
+            const progress = (currentQ / questions.length) * 100;
+            document.getElementById('progress').style.width = `${progress}%`;
+        }
+
+        function selectOption(score) {
+            totalScore += score;
+            currentQ++;
+
+            if (currentQ < questions.length) {
+                loadQuestion();
+            } else {
+                showResult();
+            }
+        }
+
+        function showResult() {
+            document.getElementById('quiz').style.display = 'none';
+            const res = document.getElementById('result');
+            res.classList.add('show');
+            
+            const icon = document.getElementById('result-icon');
+            const title = document.getElementById('result-title');
+            const desc = document.getElementById('result-desc');
+            const action = document.getElementById('action-area');
+
+            document.getElementById('progress').style.width = `100%`;
+
+            if (totalScore >= 40) {
+                icon.innerText = "👑";
+                title.innerText = "天生的傀儡巨星";
+                desc.innerText = "你的恥度已經突破天際！這項任務簡直為你量身打造。立即聯繫專員領取任務代碼。";
+                action.innerHTML = `<a href="line.me" class="block w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg">私訊領取折扣 (LINE)</a>`;
+            } else if (totalScore >= 20) {
+                icon.innerText = "🎭";
+                title.innerText = "潛力影帝";
+                desc.innerText = "你還有一點包袱，但為了 1000 元似乎可以豁出去？再考慮一下，或者挑戰看看！";
+                action.innerHTML = `<button onclick="location.reload()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-xl">重新挑戰</button>`;
+            } else {
+                icon.innerText = "🛡️";
+                title.innerText = "優雅的凡人";
+                desc.innerText = "看來你還是比較適合坐在包廂安靜地喝酒。沒關係，優雅也是一種生活態度。";
+                action.innerHTML = `<button onclick="location.reload()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-xl">再測一次</button>`;
+            }
+        }
+    </script>
+</body>
+</html>
