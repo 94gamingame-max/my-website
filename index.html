@@ -1,233 +1,438 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>秘密任務招募令：恥度挑戰賽</title>
-    <!-- 使用可靠的 CDN 版本 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;700;900&display=swap');
+import React, { useState, useRef } from 'react';
+import { Heart, Shield, DollarSign, Activity, ChevronRight, RefreshCw, Share2, AlertTriangle, Gift, MessageCircle, Zap, Ticket } from 'lucide-react';
+
+const SwoonTest = () => {
+  const [step, setStep] = useState('intro'); // intro, question, calculating, result, wheel, prize
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [score, setScore] = useState(0);
+  const [resultData, setResultData] = useState(null);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [rotation, setRotation] = useState(0);
+  const [prize, setPrize] = useState(null);
+
+  // 輪盤獎品設定
+  const prizes = [
+    { id: 1, name: "再來一次", icon: "🤡", color: "#64748b", probability: 0.2 }, // 20%
+    { id: 2, name: "滷味拼盤", icon: "🍢", color: "#f59e0b", probability: 0.3 }, // 30%
+    { id: 3, name: "一手啤酒", icon: "🍺", color: "#3b82f6", probability: 0.2 }, // 20%
+    { id: 4, name: "胖老爹", icon: "🍗", color: "#ef4444", probability: 0.3 },   // 30%
+  ];
+
+  // 題目設計
+  const questions = [
+    {
+      id: 1,
+      title: "訊息轟炸",
+      desc: "深夜下班，身心俱疲的你看到哪則訊息會瞬間「心跳漏一拍」？",
+      icon: <MessageCircle className="w-8 h-8 text-purple-400" />,
+      options: [
+        { text: "這張卡給你，想買什麼自己去刷，別省。", score: 10, icon: "💳" },
+        { text: "我知道你今天受委屈了，沒事，我在。", score: 30, icon: "🫂" },
+        { text: "你在哪？我現在過去接你，這時間不安全。", score: 20, icon: "🚗" },
+        { text: "在所有人面前我都在裝，只有對你是真的。", score: 40, icon: "🔒" }
+      ]
+    },
+    {
+      id: 2,
+      title: "關鍵時刻",
+      desc: "當你喝醉在路邊吐，對方的哪個舉動會讓你徹底淪陷？",
+      icon: <Activity className="w-8 h-8 text-red-400" />,
+      options: [
+        { text: "二話不說，直接轉了一筆錢讓你明天去按摩。", score: 10, icon: "💰" },
+        { text: "霸氣地擋開路人，把外套披在你身上說「跟我走」。", score: 20, icon: "🧥" },
+        { text: "不嫌髒，默默幫你擦嘴、拍背，眼神超心疼。", score: 30, icon: "🥺" },
+        { text: "竟然陪著你一起哭，說「我不捨得你這麼辛苦」。", score: 40, icon: "😭" }
+      ]
+    },
+    {
+      id: 3,
+      title: "禮物攻勢",
+      desc: "生日到了，他/她送哪種禮物會讓你覺得「就是這個人了」？",
+      icon: <Gift className="w-8 h-8 text-pink-400" />,
+      options: [
+        { text: "你隨口提過想要的小廢物，對方竟然記住並買來了。", score: 30, icon: "🎁" },
+        { text: "最新的 iPhone 或是直接給你一個名牌包。", score: 10, icon: "👜" },
+        { text: "親手做的相冊，裡面全是你們的合照。", score: 40, icon: "📸" },
+        { text: "帶你去高級餐廳，幫你剝蝦/夾菜、服務得無微不至。", score: 20, icon: "🍽️" }
+      ]
+    },
+    {
+      id: 4,
+      title: "致命紅燈",
+      desc: "如果對方是一個大家公認的「渣男/渣女」，對方說什麼話你會選擇原諒？",
+      icon: <AlertTriangle className="w-8 h-8 text-yellow-400" />,
+      options: [
+        { text: "「只要你不離開我，你要什麼我都買給你。」", score: 10, icon: "💍" },
+        { text: "「遇到你之後，我才想安定下來，你是我的例外。」", score: 40, icon: "💘" },
+        { text: "「其實我很孤單，沒人真正了解我的內心。」", score: 30, icon: "🥀" },
+        { text: "「誰敢欺負你？報我的名字，我幫你處理。」", score: 20, icon: "👊" }
+      ]
+    }
+  ];
+
+  const getResult = (totalScore) => {
+    if (totalScore <= 60) {
+      return {
+        type: "務實的賞金獵人",
+        badge: "人間清醒",
+        scoreDisp: "15%",
+        desc: "你早就過了耳聽愛情的年紀。甜言蜜語對你來說是廢話，你只相信「看得見的付出」和「入袋的現金」。",
+        warning: "小心因為習慣對方的物質照顧而離不開，分不清是愛錢還是愛人。",
+        color: "from-yellow-500 to-amber-700",
+        icon: <DollarSign className="w-16 h-16 text-yellow-200" />
+      };
+    } else if (totalScore <= 90) {
+      return {
+        type: "傲嬌的小公主/王子",
+        badge: "霸道總裁控",
+        scoreDisp: "50%",
+        desc: "你平常獨立慣了，什麼事都自己扛。所以當有人強勢地介入你的生活說要「保護你/罩你」時，你的防線會瞬間崩塌。",
+        warning: "你容易愛上大男人/大女人。小心，控制狂一開始都包裝得很像保鑣。",
+        color: "from-blue-500 to-indigo-700",
+        icon: <Shield className="w-16 h-16 text-blue-200" />
+      };
+    } else if (totalScore <= 130) {
+      return {
+        type: "缺愛的靈魂伴侶",
+        badge: "細節控",
+        scoreDisp: "85%",
+        desc: "你外表看起來很堅強，其實內心極度渴望「被理解」。你不在乎對方有沒有錢，只在乎他記不記得你不吃蔥、懂不懂你的梗。",
+        warning: "你是渣男/渣女的最愛。只要對方稍微展現一點耐心聽你說話，你就會覺得「他是我的救贖」。",
+        color: "from-pink-500 to-rose-700",
+        icon: <Heart className="w-16 h-16 text-pink-200" />
+      };
+    } else {
+      return {
+        type: "聖母心氾濫救世主",
+        badge: "核彈級戀愛腦",
+        scoreDisp: "200%",
+        desc: "恭喜你！你是八大行業最容易「賠了夫人又折兵」的類型！你對強者無感，但對「受傷的小狗」或「浪子回頭」毫無抵抗力。",
+        warning: "醒醒吧！他在別的局也是這樣講的！你的同情心會害死你自己。",
+        color: "from-red-600 to-red-900",
+        icon: <Activity className="w-16 h-16 text-red-200" />
+      };
+    }
+  };
+
+  const handleAnswer = (points) => {
+    const newScore = score + points;
+    setScore(newScore);
+
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1);
+    } else {
+      setStep('calculating');
+      setTimeout(() => {
+        setResultData(getResult(newScore));
+        setStep('result');
+      }, 2000);
+    }
+  };
+
+  // 抽獎邏輯
+  const spinWheel = () => {
+    if (isSpinning) return;
+    setIsSpinning(true);
+
+    // 隨機決定獎品 (加權重)
+    const rand = Math.random();
+    let cumulativeProbability = 0;
+    let selectedPrize = prizes[0];
+
+    for (const p of prizes) {
+      cumulativeProbability += p.probability;
+      if (rand <= cumulativeProbability) {
+        selectedPrize = p;
+        break;
+      }
+    }
+
+    // 計算旋轉角度
+    // 每個獎品佔 90 度 (360/4)
+    // 獎品索引: 0, 1, 2, 3
+    // 需要轉很多圈 (360 * 5) + 獎品對應的角度
+    const segmentAngle = 360 / prizes.length;
+    // 為了讓指針指到中間，需要 offset
+    const prizeIndex = prizes.indexOf(selectedPrize);
+    
+    // 修正角度計算，讓指針指向上方
+    // 假設指針在上方(0度)，輪盤順時針轉
+    const targetAngle = 360 * 6 + (360 - (prizeIndex * segmentAngle)); 
+    
+    setRotation(targetAngle);
+
+    setTimeout(() => {
+      setPrize(selectedPrize);
+      setIsSpinning(false);
+      setStep('prize');
+    }, 4000); // 配合 CSS transition 時間
+  };
+
+  const resetTest = () => {
+    setStep('intro');
+    setCurrentQuestion(0);
+    setScore(0);
+    setResultData(null);
+    setRotation(0);
+    setPrize(null);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-white flex items-center justify-center p-4 font-sans relative overflow-hidden">
+      {/* Background Ambience */}
+      <div className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl animate-blob"></div>
+        <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-pink-600 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-2000"></div>
+        <div className="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-3xl animate-blob animation-delay-4000"></div>
+      </div>
+
+      <div className="max-w-md w-full bg-slate-800/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-700 overflow-hidden relative z-10 min-h-[550px] flex flex-col">
         
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #000;
-            /* 建議將背景圖替換為穩定的 Unsplash 圖片 */
-            background-image: 
-                linear-gradient(to bottom, rgba(0,0,0,0.85), rgba(0,0,0,0.95)),
-                url('images.unsplash.com');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
-        }
-
-        .neon-text {
-            text-shadow: 0 0 10px rgba(139, 92, 246, 0.7), 0 0 20px rgba(139, 92, 246, 0.5);
-        }
-        
-        .option-card {
-            transition: all 0.2s ease;
-        }
-        
-        .option-card:active {
-            transform: scale(0.98);
-        }
-
-        .selected {
-            border-color: #8b5cf6 !important;
-            background-color: rgba(139, 92, 246, 0.3) !important;
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
-        }
-
-        .hidden-section {
-            display: none;
-            opacity: 0;
-        }
-
-        .show {
-            display: block !important;
-            animation: fadeIn 0.5s forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-    </style>
-</head>
-<body class="text-white min-h-screen p-4 flex flex-col items-center justify-center">
-
-    <!-- 1. Header Section -->
-    <div id="intro" class="max-w-md w-full bg-gray-900/90 backdrop-blur-xl rounded-2xl p-8 border border-gray-700 shadow-2xl text-center">
-        <div class="mb-4 inline-block px-3 py-1 bg-purple-600 rounded-full text-xs font-bold tracking-wider animate-pulse">
-            2025 限時任務 Mission
-        </div>
-        <h1 class="text-4xl font-black mb-2 neon-text text-purple-400">傀儡挑戰賽</h1>
-        <p class="text-gray-400 text-sm mb-6 font-light tracking-wide">
-            戴上耳機，讓我操控你的靈魂。<br>
-            只要你敢說，我就敢給折扣。
-        </p>
-
-        <div class="bg-gray-800/50 rounded-xl p-4 mb-8 text-left border border-gray-700">
-            <h3 class="text-purple-400 font-bold mb-2"><i class="fas fa-sack-dollar mr-2"></i>任務獎勵</h3>
-            <p class="text-2xl font-bold text-white mb-1">抽 5 位 各折 NT$ 1,000</p>
-            <p class="text-xs text-gray-500">完成指定 10 句對話挑戰即可參加抽獎。</p>
+        {/* Header */}
+        <div className="bg-slate-900/50 p-4 text-center border-b border-slate-700 flex justify-between items-center h-14">
+          <span className="text-xs font-bold text-slate-500 tracking-widest">八大心理實驗室</span>
+          {step === 'question' && (
+            <span className="text-xs font-bold text-pink-400 bg-pink-400/10 px-2 py-1 rounded-full">
+              Q {currentQuestion + 1} / {questions.length}
+            </span>
+          )}
+          {(step === 'result' || step === 'prize') && (
+            <span className="text-xs font-bold text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-full flex items-center gap-1">
+              <Ticket size={12}/> 好康區
+            </span>
+          )}
         </div>
 
-        <button onclick="startQuiz()" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-4 rounded-xl shadow-lg transform transition hover:scale-[1.02]">
-            我準備好了 <i class="fas fa-arrow-right ml-2"></i>
-        </button>
-    </div>
-
-    <!-- 2. Quiz Section -->
-    <div id="quiz" class="hidden-section max-w-md w-full">
-        <div class="w-full bg-gray-800 h-2 rounded-full mb-6">
-            <div id="progress" class="bg-purple-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
-        </div>
-
-        <div id="question-container" class="bg-gray-900/90 backdrop-blur-xl rounded-2xl p-6 border border-gray-700 shadow-2xl relative min-h-[420px] flex flex-col justify-between">
-            <div>
-                <span id="q-number" class="text-purple-500 text-xs font-bold tracking-widest uppercase mb-2 block"></span>
-                <h2 id="q-text" class="text-2xl font-bold mb-6 min-h-[80px] flex items-center"></h2>
-                
-                <div id="options" class="space-y-3">
-                    <!-- Options injected here -->
+        {/* Content Area */}
+        <div className="p-6 flex-1 flex flex-col justify-center relative overflow-hidden">
+          
+          {step === 'intro' && (
+            <div className="space-y-8 animate-fadeIn text-center">
+              <div className="relative inline-block">
+                <div className="absolute inset-0 bg-pink-500 blur-xl opacity-20 rounded-full"></div>
+                <div className="relative p-4 bg-slate-800 border border-slate-600 rounded-2xl mb-2">
+                  <Heart className="w-12 h-12 text-pink-500 animate-pulse" />
                 </div>
-            </div>
-            
-            <div class="mt-6 flex justify-between items-center text-xs text-gray-500">
-                <span><i class="fas fa-lock mr-1"></i> 匿名測試</span>
-                <span>@ypps_ project</span>
-            </div>
-        </div>
-    </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400">
+                  暈船體質檢測
+                </h2>
+                <p className="text-slate-300 leading-relaxed text-sm px-4">
+                  你是歡場裡最清醒的獵人，<br/>還是最容易受傷的獵物？<br/>
+                  <span className="text-pink-400 font-bold mt-2 block">🎁 測完還有機會抽「胖老爹」！</span>
+                </p>
+              </div>
 
-    <!-- 3. Result Section -->
-    <div id="result" class="hidden-section max-w-md w-full bg-gray-900/90 backdrop-blur-xl rounded-2xl p-8 border border-gray-700 shadow-2xl text-center">
-        <div id="result-icon" class="text-6xl mb-4"></div>
-        <h2 id="result-title" class="text-3xl font-bold mb-3 neon-text text-purple-400"></h2>
-        <p id="result-desc" class="text-gray-300 mb-8 leading-relaxed font-light"></p>
+              <button 
+                onClick={() => setStep('question')}
+                className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl font-bold text-lg hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-900/50 group"
+              >
+                開始檢測 <ChevronRight className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </div>
+          )}
+
+          {step === 'question' && (
+            <div className="space-y-6 animate-fadeIn">
+              <div className="text-center space-y-4">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-700 mb-2">
+                  {questions[currentQuestion].icon}
+                </div>
+                <h3 className="text-xl font-bold text-white">
+                  {questions[currentQuestion].title}
+                </h3>
+                <p className="text-slate-300 text-sm leading-relaxed min-h-[3rem]">
+                  {questions[currentQuestion].desc}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {questions[currentQuestion].options.map((option, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleAnswer(option.score)}
+                    className="w-full p-4 bg-slate-700/50 hover:bg-slate-600 border border-slate-600 hover:border-pink-500/50 rounded-xl text-left transition-all group flex items-start gap-4 active:scale-[0.98]"
+                  >
+                    <span className="text-xl pt-0.5">{option.icon}</span>
+                    <span className="text-sm font-medium text-slate-200 group-hover:text-white leading-relaxed">
+                      {option.text}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-6">
+                <div 
+                  className="bg-pink-500 h-full transition-all duration-300 ease-out"
+                  style={{ width: `${((currentQuestion) / questions.length) * 100}%` }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+          {step === 'calculating' && (
+            <div className="text-center space-y-6 animate-pulse flex flex-col items-center">
+              <div className="relative">
+                <div className="w-20 h-20 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin"></div>
+                <div className="absolute inset-0 flex items-center justify-center text-2xl">🧠</div>
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white mb-2">正在分析你的大腦迴路...</h3>
+                <p className="text-slate-400 text-sm">比對 10,000+ 筆暈船案例</p>
+              </div>
+            </div>
+          )}
+
+          {step === 'result' && resultData && (
+            <div className="space-y-5 animate-fadeIn">
+              <div className={`p-1 rounded-2xl bg-gradient-to-br ${resultData.color} shadow-xl shadow-black/50`}>
+                <div className="bg-slate-900/95 p-5 rounded-xl text-center space-y-4 backdrop-blur-sm">
+                  
+                  <div className="inline-block px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs font-bold text-white mb-2">
+                    {resultData.badge}
+                  </div>
+                  
+                  <div className="flex justify-center py-2 animate-bounce-slow">
+                    {resultData.icon}
+                  </div>
+
+                  <h2 className="text-2xl font-black text-white leading-tight">
+                    {resultData.type}
+                  </h2>
+                  
+                  <div className="py-2 flex flex-col justify-center items-center gap-1">
+                    <span className="text-xs text-slate-400 uppercase tracking-wider">暈船指數</span>
+                    <span className={`text-5xl font-black bg-gradient-to-r ${resultData.color} bg-clip-text text-transparent filter drop-shadow-lg`}>
+                      {resultData.scoreDisp}
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-slate-300 leading-relaxed border-t border-slate-800 pt-4 text-justify">
+                    {resultData.desc}
+                  </p>
+                </div>
+              </div>
+
+              {/* Call to Action for Wheel */}
+              <button 
+                onClick={() => setStep('wheel')}
+                className="w-full py-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-xl font-bold text-lg text-slate-900 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg shadow-orange-500/30 animate-pulse"
+              >
+                <Gift size={24} /> 領取暈船安慰獎
+              </button>
+            </div>
+          )}
+
+          {step === 'wheel' && (
+            <div className="flex flex-col items-center justify-center space-y-8 animate-fadeIn">
+               <div className="text-center space-y-1">
+                <h3 className="text-2xl font-black text-yellow-400">🎁 轉運大輪盤</h3>
+                <p className="text-slate-400 text-sm">看看今天運氣能不能補貼一點酒錢？</p>
+               </div>
+
+               {/* Wheel Container */}
+               <div className="relative w-64 h-64">
+                  {/* Indicator */}
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 z-20">
+                    <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[30px] border-t-white drop-shadow-md"></div>
+                  </div>
+
+                  {/* Wheel */}
+                  <div 
+                    className="w-full h-full rounded-full border-4 border-slate-700 relative shadow-2xl overflow-hidden transition-transform duration-[4000ms] cubic-bezier(0.2, 0.8, 0.2, 1)"
+                    style={{ 
+                      transform: `rotate(${rotation}deg)`,
+                      background: `conic-gradient(
+                        ${prizes[0].color} 0% 25%, 
+                        ${prizes[1].color} 25% 50%, 
+                        ${prizes[2].color} 50% 75%, 
+                        ${prizes[3].color} 75% 100%
+                      )`
+                    }}
+                  >
+                    {/* Prize Text Segments - Simplified visualization for CSS only */}
+                    {prizes.map((p, i) => (
+                      <div 
+                        key={p.id}
+                        className="absolute w-full h-full top-0 left-0 flex justify-center pt-8"
+                        style={{ transform: `rotate(${i * 90 + 45}deg)` }}
+                      >
+                         <div className="text-2xl drop-shadow-md transform -rotate-45">{p.icon}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Center Knob */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-lg z-10 flex items-center justify-center border-4 border-slate-200">
+                    <div className="w-full h-full rounded-full bg-slate-900/10"></div>
+                  </div>
+               </div>
+
+               <button 
+                  onClick={spinWheel}
+                  disabled={isSpinning}
+                  className={`w-full py-4 rounded-xl font-bold text-xl transition-all shadow-lg ${isSpinning ? 'bg-slate-700 text-slate-500 cursor-not-allowed' : 'bg-gradient-to-r from-yellow-400 to-orange-500 text-slate-900 hover:scale-[1.02] shadow-orange-500/30'}`}
+                >
+                  {isSpinning ? '祈禱中...' : '開始抽獎！'}
+               </button>
+            </div>
+          )}
+
+          {step === 'prize' && prize && (
+            <div className="space-y-6 animate-fadeIn text-center">
+              <div className="relative inline-block">
+                <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-40 rounded-full animate-pulse"></div>
+                <div className="relative p-6 bg-slate-800 border-2 border-yellow-400 rounded-3xl mb-4 shadow-2xl transform hover:scale-105 transition-transform">
+                  <div className="text-6xl mb-4 animate-bounce">{prize.icon}</div>
+                  <h3 className="text-sm text-yellow-500 font-bold tracking-widest uppercase mb-1">恭喜獲得</h3>
+                  <h2 className="text-3xl font-black text-white">{prize.name}</h2>
+                </div>
+              </div>
+
+              <div className="space-y-4 bg-slate-800/50 p-6 rounded-2xl border border-slate-700">
+                <p className="text-slate-300 leading-relaxed text-sm">
+                  {prize.name === '再來一次' 
+                    ? '哎呀！看來你的運氣都用在暈船上了... 但別灰心，截圖傳給我，我也許心情好請你喝一杯！' 
+                    : `運氣爆棚！快把這個畫面截圖下來，下次來店裡找我兌換「${prize.name}」！`}
+                </p>
+                
+                <div className="flex flex-col gap-2">
+                   <div className="flex items-center gap-2 text-xs text-slate-500 justify-center">
+                      <Zap size={14} /> 限時 24 小時內兌換有效
+                   </div>
+                   <div className="flex items-center gap-2 text-xs text-slate-500 justify-center">
+                      <Ticket size={14} /> 需出示追蹤畫面
+                   </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={resetTest}
+                  className="flex-1 py-3 bg-slate-800 border border-slate-700 rounded-xl font-medium hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 text-sm text-slate-300"
+                >
+                  <RefreshCw size={16} /> 重玩一次
+                </button>
+                <button 
+                  className="flex-1 py-3 bg-gradient-to-r from-pink-600 to-purple-600 rounded-xl font-medium hover:opacity-90 transition-colors flex items-center justify-center gap-2 text-sm text-white shadow-lg shadow-purple-900/30"
+                  onClick={() => alert("記得截圖傳私訊給我喔！")}
+                >
+                  <Share2 size={16} /> 截圖兌換
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         
-        <div id="action-area" class="space-y-4">
-            <!-- 根據分數顯示不同按鈕 -->
+        {/* Footer */}
+        <div className="p-3 text-center text-[10px] text-slate-600 border-t border-slate-800">
+          八大生存法則實驗室 • 僅供娛樂 • {step === 'wheel' ? '好運輪盤' : '心理測驗'}
         </div>
+      </div>
     </div>
+  );
+};
 
-    <script>
-        const questions = [
-            {
-                text: "如果在包廂裡，現場氣氛突然變得超級尷尬，你會？",
-                options: [
-                    { text: "立刻假裝看手機，祈禱有人說話", score: 0 },
-                    { text: "主動找話題，雖然可能更尷尬", score: 5 },
-                    { text: "享受這種尷尬，甚至故意盯著對方看", score: 10 }
-                ]
-            },
-            {
-                text: "為了 1000 元，敢對初見面的小姐說「妳長得像我阿嬤」嗎？",
-                options: [
-                    { text: "絕對不行，會被打吧！", score: 0 },
-                    { text: "如果她看起來脾氣好，可以試試看", score: 5 },
-                    { text: "敢啊！為了錢我還可以哭給她看", score: 10 }
-                ]
-            },
-            {
-                text: "需要戴耳機並掛手機拍攝（不拍臉），你可以接受嗎？",
-                options: [
-                    { text: "不行，我有偶包/身分不便", score: 0 },
-                    { text: "可以接受，不拍到臉就好", score: 10 },
-                    { text: "沒問題，我甚至想開直播", score: 10 }
-                ]
-            },
-            {
-                text: "如果耳機命令你突然對著空氣敬禮，你會？",
-                options: [
-                    { text: "拒絕執行，太丟臉了", score: 0 },
-                    { text: "猶豫一下，邊笑邊做完", score: 5 },
-                    { text: "立刻執行，做得比要求的更誇張", score: 10 }
-                ]
-            },
-            {
-                text: "最後確認：被當成「中邪」也能無所謂嗎？",
-                options: [
-                    { text: "不行，我要維持帥哥形象", score: 0 },
-                    { text: "可以，事後解釋是在拍片就好", score: 10 },
-                    { text: "只要有折扣，當神經病也無所謂", score: 10 }
-                ]
-            }
-        ];
-
-        let currentQ = 0;
-        let totalScore = 0;
-
-        function startQuiz() {
-            document.getElementById('intro').classList.add('hidden-section');
-            document.getElementById('intro').style.display = 'none';
-            document.getElementById('quiz').classList.add('show');
-            loadQuestion();
-        }
-
-        function loadQuestion() {
-            const q = questions[currentQ];
-            document.getElementById('q-number').innerText = `Question ${currentQ + 1} / ${questions.length}`;
-            document.getElementById('q-text').innerText = q.text;
-            
-            const optionsDiv = document.getElementById('options');
-            optionsDiv.innerHTML = '';
-
-            q.options.forEach((opt, index) => {
-                const btn = document.createElement('div');
-                btn.className = 'option-card bg-gray-800 p-4 rounded-xl border border-gray-600 cursor-pointer text-left text-gray-200 hover:bg-gray-700';
-                btn.innerHTML = `<span class="font-bold text-purple-500 mr-2">${String.fromCharCode(65 + index)}.</span> ${opt.text}`;
-                btn.onclick = () => selectOption(opt.score);
-                optionsDiv.appendChild(btn);
-            });
-
-            const progress = (currentQ / questions.length) * 100;
-            document.getElementById('progress').style.width = `${progress}%`;
-        }
-
-        function selectOption(score) {
-            totalScore += score;
-            currentQ++;
-
-            if (currentQ < questions.length) {
-                loadQuestion();
-            } else {
-                showResult();
-            }
-        }
-
-        function showResult() {
-            document.getElementById('quiz').style.display = 'none';
-            const res = document.getElementById('result');
-            res.classList.add('show');
-            
-            const icon = document.getElementById('result-icon');
-            const title = document.getElementById('result-title');
-            const desc = document.getElementById('result-desc');
-            const action = document.getElementById('action-area');
-
-            document.getElementById('progress').style.width = `100%`;
-
-            if (totalScore >= 40) {
-                icon.innerText = "👑";
-                title.innerText = "天生的傀儡巨星";
-                desc.innerText = "你的恥度已經突破天際！這項任務簡直為你量身打造。立即聯繫專員領取任務代碼。";
-                action.innerHTML = `<a href="line.me" class="block w-full bg-green-600 hover:bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg">私訊領取折扣 (LINE)</a>`;
-            } else if (totalScore >= 20) {
-                icon.innerText = "🎭";
-                title.innerText = "潛力影帝";
-                desc.innerText = "你還有一點包袱，但為了 1000 元似乎可以豁出去？再考慮一下，或者挑戰看看！";
-                action.innerHTML = `<button onclick="location.reload()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-xl">重新挑戰</button>`;
-            } else {
-                icon.innerText = "🛡️";
-                title.innerText = "優雅的凡人";
-                desc.innerText = "看來你還是比較適合坐在包廂安靜地喝酒。沒關係，優雅也是一種生活態度。";
-                action.innerHTML = `<button onclick="location.reload()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-xl">再測一次</button>`;
-            }
-        }
-    </script>
-</body>
-</html>
+export default SwoonTest;
